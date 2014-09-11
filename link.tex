@@ -14,6 +14,8 @@
 \usepackage{authblk}
 \usepackage{listings}
 
+\graphicspath{{figures/}}
+
 \title{(PRELIMINARY DRAFT) NDN Technical Memo: LINK}
 
 \author{NDN Project Team}
@@ -61,7 +63,15 @@ This document defines LINK object and its usage.
 By its name, a LINK object binds together two names (a name can be a prefix).
 In a way, this is somewhat similar to the ``symbolic link'' in UNIX file system.
 
-We define LINK as a sub-type of NDN DATA packet. In this DATA packet,
+We define LINK as a sub-type of NDN DATA packet (Figure~\ref{fig:link}). In this DATA packet,
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.8]{ndn-link}
+  \caption{Link}
+  \label{fig:link}
+\end{figure}
+
 
 \begin{itemize}
 \item \textbf{Name:} $\mathtt{Name}_A$
@@ -75,13 +85,38 @@ We define LINK as a sub-type of NDN DATA packet. In this DATA packet,
   For example, in the hierarchical trust model, this is $\mathtt{Name}_A$ or $\mathtt{Name}_A$ 's parent key, confirming that $\mathtt{Name}_A$ has delegated a sub-namespace to $\mathtt{Name}_B$
 \end{itemize}
 
-
 This LINK object binds together the names A and B.
 
 LINK can be used to serve two purposes: redirect (like HTTP redirect), or encapsulation.
 
 ``Redirect'' means that when a consumer sends an Interest with name $\mathtt{Name}_A$, the reply Data packet contains a LINK which carries another name $\mathtt{Name}_B$, indicating that the produce of $\mathtt{Name}_A$ suggests the consumer to send the Interest using name B to request the desired data.
 Here $\mathtt{Name}_A$ and $\mathtt{Name}_B$ can be either a prefix or an exact name
+
+\subsection{LINK with Delegation}
+
+In many cases, it is necessary to ensure not only that an entity A has linked some name prefix from namespace A to namespace B, but also that B has authorized A to perform such actions.
+For this purpose we define Delegation link object (Figure~\ref{fig:delegation}), which contains the following information:
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.8]{delegation}
+  \caption{Delegation}
+  \label{fig:delegation}
+\end{figure}
+
+\begin{itemize}
+\item \textbf{Name:} $\mathtt{Name}_A$
+\item \textbf{MetaInfo:}
+  \begin{itemize}
+  \item \textbf{ContentType:} \verb|DELEGATION|
+  \item \textbf{FreshnessPeriod:} optional, producer defined period of DELEGATION object freshness
+  \end{itemize}
+\item \textbf{Content:} LINK object ``redirecting'' namespace $B$ to a prefix of name $A$.  This LINK object ensures that owner of namespace $B$ actually authorized owner of the namespace $A$ to perform redirections.
+\item \textbf{Signature:} by a key that authorized to sign Data in namespace $\mathtt{Name}_A$.
+  For example, in the hierarchical trust model, this is $\mathtt{Name}_A$ or $\mathtt{Name}_A$ 's parent key, confirming that $\mathtt{Name}_A$ has delegated a sub-namespace to $\mathtt{Name}_B$
+\end{itemize}
+
+
 
 \subsection{LINK for Data Retrieval (Encapsulation)}
 
@@ -96,7 +131,14 @@ More specifically, to retrieve a Data packet with a name $N_{u}$ that is not dir
 \item construct the name $N_{r}$ that contains $P_r$ and $N_{u}$ (e.g., concatenation or concatenation with marker delimiter\footnote{The delimiter may be necessary to disambiguate prefixes during forwarding}), and sends Interest packet
 \end{itemize}
 
-The retrieved Data packet should conform to the following format:
+The retrieved Data packet should conform to the following format (Figure~\ref{fig:linked-data}):
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.8]{linked-data}
+  \caption{Linked Data}
+  \label{fig:linked-dat}
+\end{figure}
 
 \begin{itemize}
 \item \textbf{Name:} $\mathtt{Name}_{outer}$
@@ -107,13 +149,14 @@ The retrieved Data packet should conform to the following format:
   \end{itemize}
 \item \textbf{Content:} two Data packets stacked together
   \begin{itemize}
-  \item LINK object linking Pr to Pu (that should be identical as the result from resolution?)
+  \item Delegation object linking Pr to Pu
   \item Data object with name N1 that the consumer wants, and with a signature by N1 or its parent's key.
   \end{itemize}
 
 \item \textbf{Signature:} lightweight signature by $\mathtt{Name}_{outer}$ owner or hash digest for transmission integrity protection.
 
 \end{itemize}
+
 
 \subsubsection{Details to Work Out}
 
